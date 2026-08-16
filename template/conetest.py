@@ -9,6 +9,8 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TRPG Main Loop Example")
 clock = pygame.time.Clock()
+
+devmode = False  # Set to True to enable developer mode features
 displayboxheight = 50
 displaylist = [((1,0),'w', 0),((0,1),'a' ,0),((1,1),'s', 0),((2,1),'d', 0),((0,2),'Shift', 0),((1,2),'Space', 0)]
 padding = 10
@@ -26,7 +28,7 @@ playerviewangle = 120
 x = WIDTH//2
 y = HEIGHT//2
 number_of_targets = 5
-targetradius = 20
+targetradius = 15
 targetviewradius = 70
 targetviewangle = 90
 target_rotation_speed = 0.5  # degrees per frame
@@ -37,6 +39,11 @@ GAMEPLAY = "gameplay"
 PAUSE = "pause"
 GAMEOVER = "gameover"
 
+# load images
+target_image = pygame.image.load('template\\badwolf.png')
+target_image = pygame.transform.scale(target_image, (targetradius * 2, targetradius * 2))
+player_image = pygame.image.load('template\\hunter.png')
+player_image = pygame.transform.scale(player_image, (playerradius * 2, playerradius * 2))
 
 
 def initialize_gameplay():
@@ -109,7 +116,6 @@ def draw_main_menu(surface, mouse_pos, mouse_clicked):
 
 def draw_gameplay(surface, mouse_pos, mouse_clicked):
     global direction, x, y, playerspeed, playercolor, score
-    chasing = False
     up = 90
     upright = 45
     upleft = 135
@@ -136,36 +142,39 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
         return "pause"
 
     # keymaps
-    for rectxy, dtext, hovered in displaylist:
-        rectx, recty = rectxy
-        text = font.render(dtext, True, (255, 255, 255))
-        if hovered:
-            pygame.draw.rect(surface, (100, 100, 100), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
-        else:
-            pygame.draw.rect(surface, (50, 50, 50), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
-        if text.get_width() > displayboxheight:
-            surface.blit(text, (rectx * (displayboxheight + padding) + (max(text.get_width()+padding, displayboxheight) - text.get_width()) // 2, recty * (displayboxheight + padding) + (displayboxheight - text.get_height()) // 2))
-        else:
-            surface.blit(text, (rectx * (displayboxheight + padding)+padding + (displayboxheight - text.get_width()) // 2, recty * (displayboxheight + padding)+padding + (displayboxheight - text.get_height()) // 2))
+    if devmode:
+        for rectxy, dtext, hovered in displaylist:
+            rectx, recty = rectxy
+            text = font.render(dtext, True, (255, 255, 255))
+            if hovered:
+                pygame.draw.rect(surface, (100, 100, 100), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
+            else:
+                pygame.draw.rect(surface, (50, 50, 50), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
+            if text.get_width() > displayboxheight:
+                surface.blit(text, (rectx * (displayboxheight + padding) + (max(text.get_width()+padding, displayboxheight) - text.get_width()) // 2, recty * (displayboxheight + padding) + (displayboxheight - text.get_height()) // 2))
+            else:
+                surface.blit(text, (rectx * (displayboxheight + padding)+padding + (displayboxheight - text.get_width()) // 2, recty * (displayboxheight + padding)+padding + (displayboxheight - text.get_height()) // 2))
 
     def player_in_view(target_pos, target_viewing_direction):
-            target_x, target_y = target_pos
-            dx = x - target_x
-            dy = y - target_y
-            distance = math.hypot(dx, dy)
-    
-            if distance > targetviewradius + playerradius:
-                return False
-    
-            player_angle = math.degrees(math.atan2(dy, dx)) 
-            if player_angle < 0:
-                player_angle += 360
-            #print(f"Player angle: {player_angle}, target direction: {target_viewing_direction}")
-    
-            relative_angle = 360 - player_angle
-            return target_viewing_direction - targetviewangle / 2 <= relative_angle <= target_viewing_direction + targetviewangle / 2
+        target_x, target_y = target_pos
+        dx = x - target_x
+        dy = y - target_y
+        distance = math.hypot(dx, dy)
+
+        if distance > targetviewradius + playerradius:
+            return False
+
+        player_angle = math.degrees(math.atan2(dy, dx)) 
+        if player_angle < 0:
+            player_angle += 360
+        #print(f"Player angle: {player_angle}, target direction: {target_viewing_direction}")
+
+        relative_angle = 360 - player_angle
+        return target_viewing_direction - targetviewangle / 2 <= relative_angle <= target_viewing_direction + targetviewangle / 2
 
     def target_in_view(target_pos):
+        if devmode:
+            return True  # In dev mode, all targets are always visible
         target_x, target_y = target_pos
         dx = target_x - x
         dy = target_y - y
@@ -190,7 +199,6 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
     for target_pos, target_value, target_viewing_direction in targetlist:
         if target_value > 0:
             if target_in_view(target_pos):
-                pygame.draw.circle(surface, red, target_pos, targetradius)
                 target_x, target_y = target_pos
                 pygame.draw.arc(
                     surface,
@@ -200,6 +208,7 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
                     (target_viewing_direction + targetviewangle/2) * (3.14 / 180),
                     targetviewradius - targetradius,
                 )
+                surface.blit(target_image, (target_pos[0] - targetradius, target_pos[1] - targetradius))
         else:
             pygame.draw.circle(surface, grey, target_pos, targetradius)
 
@@ -262,8 +271,8 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
         return "win"
 
     # Draw player
-    pygame.draw.circle(surface, playercolor, (x, y), playerradius)    
-    
+    surface.blit(player_image, (x - playerradius, y - playerradius))
+
     pressed = pygame.key.get_pressed()
 
     move_x = 0
