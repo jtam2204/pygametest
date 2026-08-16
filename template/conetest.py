@@ -182,8 +182,9 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
         relative_angle = 360 - target_angle
         return direction - playerviewangle / 2 <= relative_angle <= direction + playerviewangle / 2
 
-    # draw vision cone
-    pygame.draw.arc(surface, (255, 255, 255), vision_rect, (direction - playerviewangle/2) * (3.14/180), (direction + playerviewangle/2) * (3.14/180), playerviewradius - playerradius)
+    # draw vision cone with a slight transparency so the game world remains visible
+    player_vision_color = (255, 255, 255, 80)
+    pygame.draw.arc(surface, player_vision_color, vision_rect, (direction - playerviewangle/2) * (3.14/180), (direction + playerviewangle/2) * (3.14/180), playerviewradius - playerradius)
 
     # Draw targets only when they are inside the player's vision cone
     for target_pos, target_value, target_viewing_direction in targetlist:
@@ -193,7 +194,7 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
                 target_x, target_y = target_pos
                 pygame.draw.arc(
                     surface,
-                    yellow,
+                    (255, 255, 0, 90),
                     (target_x - targetviewradius, target_y - targetviewradius, targetviewradius * 2, targetviewradius * 2),
                     (target_viewing_direction - targetviewangle/2) * (3.14 / 180),
                     (target_viewing_direction + targetviewangle/2) * (3.14 / 180),
