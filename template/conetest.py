@@ -9,6 +9,9 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TRPG Main Loop Example")
 clock = pygame.time.Clock()
+displayboxheight = 50
+displaylist = [((1,0),'w', 0),((0,1),'a' ,0),((1,1),'s', 0),((2,1),'d', 0),((0,2),'Shift', 0),((1,2),'Space', 0)]
+padding = 10
 red = (255, 0, 0)
 green = (0, 255, 0)
 blue = (0, 0, 255)
@@ -122,8 +125,28 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
 
     surface.fill((60, 30, 30))
     font = pygame.font.SysFont(None, 60)
-    text = font.render("Gameplay", True, (255, 255, 255))
-    #surface.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - text.get_height()//2))
+
+    # Simple pause button (top right)
+    button_font = pygame.font.SysFont(None, 40) 
+    pause_button_rect = pygame.Rect(WIDTH - 120, 20, 100, 40)
+    pygame.draw.rect(surface, (100, 100, 100), pause_button_rect)
+    pause_text = button_font.render("Pause", True, (255, 255, 255))
+    surface.blit(pause_text, (pause_button_rect.centerx - pause_text.get_width()//2, pause_button_rect.centery - pause_text.get_height()//2))
+    if mouse_clicked and pause_button_rect.collidepoint(mouse_pos) or pygame.key.get_pressed()[pygame.K_ESCAPE]:
+        return "pause"
+
+    # keymaps
+    for rectxy, dtext, hovered in displaylist:
+        rectx, recty = rectxy
+        text = font.render(dtext, True, (255, 255, 255))
+        if hovered:
+            pygame.draw.rect(surface, (100, 100, 100), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
+        else:
+            pygame.draw.rect(surface, (50, 50, 50), (rectx * (displayboxheight + padding)+padding, recty * (displayboxheight + padding)+padding, max(text.get_width()+padding, displayboxheight), displayboxheight), 5, border_radius=5)
+        if text.get_width() > displayboxheight:
+            surface.blit(text, (rectx * (displayboxheight + padding) + (max(text.get_width()+padding, displayboxheight) - text.get_width()) // 2, recty * (displayboxheight + padding) + (displayboxheight - text.get_height()) // 2))
+        else:
+            surface.blit(text, (rectx * (displayboxheight + padding)+padding + (displayboxheight - text.get_width()) // 2, recty * (displayboxheight + padding)+padding + (displayboxheight - text.get_height()) // 2))
 
     def player_in_view(target_pos, target_viewing_direction):
             target_x, target_y = target_pos
@@ -239,15 +262,6 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
 
     # Draw player
     pygame.draw.circle(surface, playercolor, (x, y), playerradius)    
-
-    # Simple pause button (top right)
-    button_font = pygame.font.SysFont(None, 40) 
-    pause_button_rect = pygame.Rect(WIDTH - 120, 20, 100, 40)
-    pygame.draw.rect(surface, (100, 100, 100), pause_button_rect)
-    pause_text = button_font.render("Pause", True, (255, 255, 255))
-    surface.blit(pause_text, (pause_button_rect.centerx - pause_text.get_width()//2, pause_button_rect.centery - pause_text.get_height()//2))
-    if mouse_clicked and pause_button_rect.collidepoint(mouse_pos) or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-        return "pause"
     
     pressed = pygame.key.get_pressed()
 
@@ -255,20 +269,32 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
     move_y = 0
     if pressed[pygame.K_w] or pressed[pygame.K_UP]:
         if pressed[pygame.K_w]:
+            displaylist[0] = ((1,0),'w', 1)
             move_y -= 1
         direction = up
+    else:
+        displaylist[0] = ((1,0),'w', 0)
     if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
         if pressed[pygame.K_s]:
+            displaylist[1] = ((0,1),'s', 1)
             move_y += 1
         direction = down
+    else:
+        displaylist[1] = ((0,1),'s', 0)
     if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
         if pressed[pygame.K_a]:
+            displaylist[2] = ((1,1),'a', 1)
             move_x -= 1
         direction = left
+    else:
+        displaylist[2] = ((1,1),'a', 0)
     if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
         if pressed[pygame.K_d]:
+            displaylist[3] = ((2,1),'d', 1)
             move_x += 1
         direction = right
+    else:
+        displaylist[3] = ((2,1),'d', 0) 
 
     if move_x != 0 and move_y != 0:
         move_amount = normalizedspeed
@@ -293,12 +319,16 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
 
     if pygame.key.get_pressed()[pygame.K_SPACE]:
         playerspeed = 4
+        displaylist[5] = ((3,2),'Space', 1)
         print('Fast mode activated')
     elif pygame.key.get_pressed()[pygame.K_LSHIFT]:
         playerspeed = 1
+        displaylist[4] = ((0,2),'Shift', 1)
         print('Slow mode activated')
     else:
         playerspeed = 2
+        displaylist[4] = ((0,2),'Shift', 0)
+        displaylist[5] = ((3,2),'Space', 0)
     return None
 
 def draw_pause(surface, mouse_pos, mouse_clicked):
