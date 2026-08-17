@@ -7,7 +7,7 @@ import sys
 pygame.init()
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("TRPG Main Loop Example")
+pygame.display.set_caption("Hunt down the wolves")
 clock = pygame.time.Clock()
 
 devmode = False  # Set to True to enable developer mode features
@@ -22,13 +22,13 @@ orange = (255, 165, 0)
 grey = (128, 128, 128)
 playercolor = green
 direction = 0  # Initialize direction variable
-playerradius = 15
+playerradius = 20
 playerviewradius = 90
 playerviewangle = 120
 x = WIDTH//2
 y = HEIGHT//2
 number_of_targets = 5
-targetradius = 15
+targetradius = 20
 targetviewradius = 70
 targetviewangle = 90
 target_rotation_speed = 0.5  # degrees per frame
@@ -40,18 +40,21 @@ PAUSE = "pause"
 GAMEOVER = "gameover"
 
 # load images
-target_image = pygame.image.load('template\\badwolf.png')
-target_image = pygame.transform.scale(target_image, (targetradius * 2, targetradius * 2))
-player_image = pygame.image.load('template\\hunter.png')
-player_image = pygame.transform.scale(player_image, (playerradius * 2, playerradius * 2))
+enemy_live = pygame.image.load('template\\badwolf.png')
+enemy_die = pygame.image.load('template\\badwolfdie.png')
+hunter_live = pygame.image.load('template\\hunter.png')
+hunter_alert = pygame.image.load('template\\hunteralert.png')
 
 
 def initialize_gameplay():
-    global x, y, playerspeed, targetlist, score
+    global x, y, playerspeed, targetlist, score, target_image, player_image
     score = 0
     x = WIDTH // 2
     y = HEIGHT // 2
     playerspeed = 2
+    target_image = enemy_live
+    player_image = hunter_live
+
     targetlist = []
 
     min_target_spacing = targetradius * 2 + 10
@@ -88,21 +91,38 @@ def initialize_gameplay():
             targetlist.append(((target_x, target_y), 1, random.randint(0, 359)))
 
 def draw_main_menu(surface, mouse_pos, mouse_clicked):
+    global devmode
+    devmode = False  # Initialize devmode to False
     surface.fill((30, 30, 60))
     title_font = pygame.font.SysFont(None, 60)
     button_font = pygame.font.SysFont(None, 40)
-    title_text = title_font.render("Stealthy Cone Chase", True, (255, 255, 255))
+    title_text = title_font.render("Hunt the Wolves", True, (255, 255, 255))
     surface.blit(title_text, (WIDTH//2 - title_text.get_width()//2, HEIGHT//2 - 120))
 
     # Draw Play button
-    play_button_rect = pygame.Rect(WIDTH//2 - 100, HEIGHT//2 - 40, 200, 50)
-    pygame.draw.rect(surface, (70, 130, 180), play_button_rect)
+    play_button_rect = pygame.Rect(WIDTH//2 - 310, HEIGHT//2 - 40, 300, 50)
+    if play_button_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(surface, (100, 180, 220), play_button_rect)
+    else:
+        pygame.draw.rect(surface, (70, 130, 180), play_button_rect)
     play_text = button_font.render("New Game", True, (255, 255, 255))
     surface.blit(play_text, (play_button_rect.centerx - play_text.get_width()//2, play_button_rect.centery - play_text.get_height()//2))
 
+    # Draw Play with dev mode button
+    play_dev_button_rect = pygame.Rect(WIDTH//2 + 10, HEIGHT//2 -40, 300, 50)
+    if play_dev_button_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(surface, (130, 70, 180), play_dev_button_rect)
+    else:
+        pygame.draw.rect(surface, (100, 50, 130), play_dev_button_rect)
+    play_dev_text = button_font.render("New Game (Dev)", True, (255, 255, 255))
+    surface.blit(play_dev_text, (play_dev_button_rect.centerx - play_dev_text.get_width()//2, play_dev_button_rect.centery - play_dev_text.get_height()//2))
+
     # Draw Quit button
-    quit_button_rect = pygame.Rect(WIDTH//2 - 100, HEIGHT//2 + 30, 200, 50)
-    pygame.draw.rect(surface, (180, 70, 70), quit_button_rect)
+    quit_button_rect = pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 30, 300, 50)
+    if quit_button_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(surface, (220, 100, 100), quit_button_rect)
+    else:
+        pygame.draw.rect(surface, (180, 70, 70), quit_button_rect)
     quit_text = button_font.render("Quit", True, (255, 255, 255))
     surface.blit(quit_text, (quit_button_rect.centerx - quit_text.get_width()//2, quit_button_rect.centery - quit_text.get_height()//2))
 
@@ -112,10 +132,14 @@ def draw_main_menu(surface, mouse_pos, mouse_clicked):
             return "play"
         elif quit_button_rect.collidepoint(mouse_pos):
             return "quit"
+        elif play_dev_button_rect.collidepoint(mouse_pos):
+            initialize_gameplay()  # Reset gameplay state when starting a new game
+            devmode = True  # Enable developer mode for this session
+            return "play"
     return None
 
 def draw_gameplay(surface, mouse_pos, mouse_clicked):
-    global direction, x, y, playerspeed, playercolor, score
+    global direction, x, y, playerspeed, playercolor, score, player_image, target_image
     up = 90
     upright = 45
     upleft = 135
@@ -135,7 +159,10 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
     # Simple pause button (top right)
     button_font = pygame.font.SysFont(None, 40) 
     pause_button_rect = pygame.Rect(WIDTH - 120, 20, 100, 40)
-    pygame.draw.rect(surface, (100, 100, 100), pause_button_rect)
+    if pause_button_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(surface, (150, 150, 150), pause_button_rect)
+    else:
+        pygame.draw.rect(surface, (100, 100, 100), pause_button_rect)
     pause_text = button_font.render("Pause", True, (255, 255, 255))
     surface.blit(pause_text, (pause_button_rect.centerx - pause_text.get_width()//2, pause_button_rect.centery - pause_text.get_height()//2))
     if mouse_clicked and pause_button_rect.collidepoint(mouse_pos) or pygame.key.get_pressed()[pygame.K_ESCAPE]:
@@ -210,7 +237,7 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
                 )
                 surface.blit(target_image, (target_pos[0] - targetradius, target_pos[1] - targetradius))
         else:
-            pygame.draw.circle(surface, grey, target_pos, targetradius)
+            surface.blit(enemy_die, (target_pos[0] - targetradius, target_pos[1] - targetradius))
 
     # Rotate each target's viewing cone over time
     for i, (target_pos, target_value, target_viewing_direction) in enumerate(targetlist):
@@ -264,7 +291,9 @@ def draw_gameplay(surface, mouse_pos, mouse_clicked):
                 return "lose"
             targetlist[i] = (target_pos, 0, target_viewing_direction)
         elif is_chasing:
-            playercolor = orange
+            player_image = hunter_alert
+        else:
+            player_image = hunter_live
     #check for win condition
     if all(target_value <= 0 for _, target_value, _ in targetlist):
         print("All targets neutralized! You win!")
